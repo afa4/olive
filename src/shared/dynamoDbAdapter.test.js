@@ -1,4 +1,4 @@
-const { DynamoDbAdapter } = require("./dynamoDbAdapter");
+const dynamoDbAdapter = require("./dynamoDbAdapter");
 
 test("should send put item command", async () => {
   const dynamoDbMock = {
@@ -6,7 +6,8 @@ test("should send put item command", async () => {
       return Promise.resolve();
     }),
   };
-  await new DynamoDbAdapter(dynamoDbMock).putItemFromObjet("qrcode", {
+  dynamoDbAdapter.setDynamoDbClient(dynamoDbMock);
+  await dynamoDbAdapter.putItemFromObjet("qrcode", {
     id: "hsuahs123413dd32",
     name: "my_link",
     createdAt: 2293293,
@@ -34,7 +35,8 @@ test("should send put item command with nested objects", async () => {
       return Promise.resolve();
     }),
   };
-  await new DynamoDbAdapter(dynamoDbMock).putItemFromObjet("qrcode", {
+  dynamoDbAdapter.setDynamoDbClient(dynamoDbMock);
+  await dynamoDbAdapter.putItemFromObjet("qrcode", {
     id: "hsuahs123413dd32",
     name: "my_link",
     createdAt: 2293293,
@@ -69,10 +71,11 @@ test("should send put item command with nested objects", async () => {
 test("should send query command", async () => {
   const dynamoDbMock = {
     send: jest.fn(() => {
-      return Promise.resolve({ Items: [{}] });
+      return Promise.resolve({ Items: [{}, {}] });
     }),
   };
-  await new DynamoDbAdapter(dynamoDbMock).getSingleByPK("qrcode", {
+  dynamoDbAdapter.setDynamoDbClient(dynamoDbMock);
+  await dynamoDbAdapter.getSingleByPK("qrcode", {
     id: "hsuahs123413dd32",
   });
 

@@ -1,10 +1,10 @@
 const { isValidAuth } = require('../shared/auth');
 const { buildGravataAventuraPDF } = require('./pdf');
-const { convertBrDateToIso, currentBrIsoDate } = require('./utils');
+const { convertBrDateToIso, toBrIsoDate } = require('./utils');
 const { SendMessageCommand, SQSClient } = require("@aws-sdk/client-sqs"); // todo: create adapter
 const { config } = require('./config');
 const { v4 } = require('uuid');
-const { DynamoDbAdapter } = require('../shared/dynamoDbAdapter');
+const dynamoDbAdapter = require('../shared/dynamoDbAdapter');
 const { insertSheetRows } = require('./googledrive/insert-sheet-rows');
 const { copyFile } = require('./googledrive/copy-file');
 const client = new SQSClient(config.sqsConfig);
@@ -142,30 +142,27 @@ function parseData(formData) {
     return { customer, passenger, tourName, tourDate: convertBrDateToIso(tourDate) };
 }
 
-async function insuranceScheduleHandler(event) {
-    const tourDate = currentBrIsoDate();
+async function insuranceScheduleHandler(event, tourDate = new Date()) {
+    tourDate = toBrIsoDate(tourDate);
     let tourAtvs;
     try {
-        const dynamoDbAdapter = new DynamoDbAdapter();
         tourAtvs = await dynamoDbAdapter.getByPK(config.toursTableName, { tourDate });
     } catch (e) {
         console.error('ERROR TRYING TO RETRIEVE TOUR ATVS', e);
         return;
     }
-    if(!tourAtvs) {
+    if (!tourAtvs || tourAtvs.length == 0) {
         return;
     }
     const personRows = tourAtvs.flatMap(tourAtv => {
         const { customer, passenger } = tourAtv;
-        if(!passenger)
+        if (!passenger)
             return [customer.M];
         return [customer.M, passenger.M]
     }).map(person => {
         return [person.name.S, person.cpf.S, person.birth.S, tourDate, tourDate, 30000, '', '', 1, 1];
     });
-    if (personRows.length == 0) {
-        return;
-    }
+    
     let copyFileMetadata;
     try {
         copyFileMetadata = await copyFile(config.googleDriveBaseInsuranceFile, `${tourDate}-seguros`);
